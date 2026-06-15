@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📖 错题本 - 高中生专属</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ─── 顶部导航 ─── -->
+  <header class="header">
+    <div class="header-inner">
+      <h1 class="logo">📖 错题本</h1>
+      <span class="subtitle">· 巩固每个薄弱点</span>
+      <div class="header-status">
+        <span id="dueBadge" class="badge" title="今日待复习">📅 加载中...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── 主体 ─── -->
+  <div class="app-container">
+
+    <!-- 侧边栏 -->
+    <nav class="sidebar" id="sidebar">
+      <button class="nav-btn active" data-page="dashboard">📊 概览</button>
+      <button class="nav-btn" data-page="add">✏️ 录入错题</button>
+      <button class="nav-btn" data-page="browse">📂 分类浏览</button>
+      <button class="nav-btn" data-page="review">🔄 复习模式</button>
+      <button class="nav-btn" data-page="practice">🎯 练习模式</button>
+      <button class="nav-btn" data-page="stats">📈 学习统计</button>
+      <button class="nav-btn" data-page="ai_model">🤖 AI 模型</button>
+      <button class="nav-btn" data-page="knowledge_base">📚 知识库</button>
+    </nav>
+
+    <!-- 内容区 -->
+    <main class="content" id="content">
+      <!-- 由 JS 动态渲染 -->
+    </main>
+
+  </div>
+
+  <!-- ─── Toast 通知 ─── -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- ─── 弹窗遮罩 ─── -->
+  <div id="modalOverlay" class="modal-overlay hidden">
+    <div class="modal" id="modalBox">
+      <div class="modal-header" id="modalHeader">
+        <h3 id="modalTitle"></h3>
+        <button class="modal-close" id="modalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer" id="modalFooter"></div>
+    </div>
+  </div>
+
+  <!-- ─── Scripts ─── -->
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

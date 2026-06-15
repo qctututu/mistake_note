@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# 虚拟环境
+venv/
+.venv/
+
+# 用户数据（不提交到版本控制）
+backend/data/mistake_note.db
+backend/data/ai_config.json
+backend/data/images/
+backend/data/knowledge_base/
+
+# 日志
+logs/*.log
+
+# IDE（.vscode/launch.json 可以保留，视你喜好）
+# .vscode/
+
+# 系统
+.DS_Store
+Thumbs.db

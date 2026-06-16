@@ -1,7 +1,14 @@
 # 错题本 - PowerShell 启动脚本
 $ErrorActionPreference = "Stop"
-$root = "D:\Study\mistake_note"
+$root = $PSScriptRoot
 $backend = Join-Path $root "backend"
+$frontend = Join-Path $root "frontend\index.html"
+$logsDir = Join-Path $root "logs"
+$logFile = Join-Path $logsDir "backend.log"
+
+if (-not (Test-Path $logsDir)) {
+	New-Item -ItemType Directory -Path $logsDir | Out-Null
+}
 
 Write-Host "=== Mistake Note Starting ===" -ForegroundColor Cyan
 
@@ -12,15 +19,19 @@ Write-Host "[OK] Dependencies installed" -ForegroundColor Green
 
 Write-Host "[2/3] Starting backend server..." -ForegroundColor Yellow
 $env:PYTHONIOENCODING = "utf-8"
-$logFile = Join-Path $root "logs\backend.log"
 Write-Host "     Log: $logFile" -ForegroundColor DarkGray
-$job = Start-Job -ScriptBlock { param($d, $lf) Set-Location $d; python app.py *>> $lf } -ArgumentList $backend, $logFile
+$job = Start-Job -ScriptBlock {
+	param($d, $lf)
+	Set-Location $d
+	$env:PYTHONIOENCODING = "utf-8"
+	python app.py *>> $lf
+} -ArgumentList $backend, $logFile
 Write-Host "[OK] Backend Job ID: $($job.Id)" -ForegroundColor Green
 
 Start-Sleep -Seconds 3
 
 Write-Host "[3/3] Opening frontend..." -ForegroundColor Yellow
-Start-Process (Join-Path $root "frontend\index.html")
+Start-Process $frontend
 Write-Host "[OK] Frontend opened in browser" -ForegroundColor Green
 
 Write-Host ""

@@ -48,31 +48,70 @@ python app.py
 
 ## 🏗️ 项目结构
 
-```
-D:\Study\mistake_note\
+```text
+mistake_note/
 ├── backend/
-│   ├── app.py                   # Flask API 服务
-│   ├── models.py                # 数据库模型 & CRUD
-│   ├── spaced_repetition.py     # SM-2 遗忘曲线算法
-│   ├── question_modifier.py     # 规则引擎变形（备用）
-│   ├── ai_model.py              # AI 模型客户端（OpenAI/DeepSeek）
-│   ├── knowledge_base.py        # 知识库（RAG 文件上传 & FTS5 检索）
+│   ├── app.py                       # Flask 入口，注册全部路由
 │   ├── requirements.txt
+│   ├── routes/                      # API 接口层
+│   │   ├── __init__.py
+│   │   ├── subjects.py
+│   │   ├── questions.py
+│   │   ├── review.py
+│   │   ├── practice.py
+│   │   ├── ai.py
+│   │   ├── knowledge_base.py
+│   │   └── system.py
+│   ├── services/                    # 业务逻辑层
+│   │   ├── __init__.py
+│   │   ├── spaced_repetition.py
+│   │   ├── question_modifier.py
+│   │   ├── ai_model.py
+│   │   └── knowledge_base.py
+│   ├── repository/                  # 数据访问层
+│   │   ├── __init__.py
+│   │   └── database.py
 │   └── data/
-│       ├── mistake_note.db      # SQLite 数据库（自动创建）
-│       └── kb_files/            # 知识库上传文件存放目录
+│       ├── mistake_note.db          # SQLite 数据库（自动创建）
+│       ├── images/                  # 上传图片目录
+│       └── knowledge_base/          # 知识库文件目录
 ├── frontend/
-│   ├── index.html               # SPA 主页面
-│   ├── css/style.css            # 样式（响应式 + 弹窗动画 + AI 页面）
+│   ├── index.html
+│   ├── css/
+│   │   └── style.css
 │   └── js/
-│       ├── api.js               # 前端 API 层（含 AI & KB 接口）
-│       └── app.js               # SPA 路由 & 页面逻辑
-├── logs/                         # 运行日志目录（自动创建）
-│   └── backend.log              # 后端运行日志
-├── start.bat                    # 一键启动脚本（日志 → logs/backend.log）
-├── start.ps1                    # PowerShell 启动脚本
+│       ├── api.js
+│       ├── app.js                   # 启动脚本（只做装配）
+│       ├── core/                    # 公共能力层
+│       │   ├── ui.js
+│       │   ├── format.js
+│       │   ├── charts.js
+│       │   ├── data.js
+│       │   └── runtime.js
+│       └── pages/                   # 页面模块层
+│           ├── dashboard.js
+│           ├── add.js
+│           ├── browse.js
+│           ├── review.js
+│           ├── stats.js
+│           ├── practice.js
+│           ├── ai_model.js
+│           └── knowledge_base.js
+├── logs/
+│   └── backend.log
+├── test_files/
+├── batch_import_kb.py
+├── fix_encoding.py
+├── start.bat
+├── start.ps1
 └── README.md
 ```
+
+## 🧱 分层架构说明
+
+- 后端采用三层：`routes`（HTTP 接口）→ `services`（业务逻辑）→ `repository`（数据访问）
+- 前端采用三层：`pages`（页面功能）→ `core`（跨页面公共能力）→ `app.js`（启动装配）
+- 这样可以降低耦合，便于后续新增页面、替换数据源、扩展 AI 能力
 
 ## 🤖 AI 模型配置
 
@@ -111,7 +150,6 @@ D:\Study\mistake_note\
 ### 基础 & 错题
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | /api/health | 健康检查 |
 | GET/POST | /api/subjects | 科目列表 / 新增 |
 | GET/POST | /api/questions | 错题列表（分页）/ 新增 |
 | GET/PUT/DELETE | /api/questions/:id | 错题详情 / 更新 / 删除 |
@@ -128,7 +166,8 @@ D:\Study\mistake_note\
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | /api/practice/generate | 生成变形题（AI 优先，失败后降级规则引擎） |
-| POST | /api/practice/compare | 对比变形题答案 |
+| POST | /api/practice/grade | AI 批改练习答案 |
+| POST | /api/practice/analyze | AI 生成错因与改进建议 |
 
 ### AI 模型配置
 | 方法 | 路径 | 说明 |
@@ -136,7 +175,8 @@ D:\Study\mistake_note\
 | GET | /api/ai/config | 获取当前配置 |
 | POST | /api/ai/config | 保存配置 |
 | DELETE | /api/ai/config | 清除配置 |
-| POST | /api/ai/test | 测试连接 |
+| GET/POST | /api/ai/test | 测试连接（POST 时可携带临时配置） |
+| POST | /api/ai/generate | 基于单题生成变形题 |
 | GET | /api/ai/status | 返回配置状态（是否可用） |
 
 ### 知识库
@@ -152,6 +192,13 @@ D:\Study\mistake_note\
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | /api/stats | 学习统计数据 |
+
+### 系统
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/health | 健康检查 |
+| POST | /api/upload-image | 上传答案图片 |
+| GET | /uploads/images/:filename | 访问上传图片 |
 
 ## 🧠 遗忘曲线算法
 
@@ -183,5 +230,3 @@ D:\Study\mistake_note\
 - [ ] 错题拍照自动识别（OCR）
 
 ---
-
-Made with 🦞 by 小龙虾

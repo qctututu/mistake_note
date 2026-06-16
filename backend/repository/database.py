@@ -1,5 +1,5 @@
 """
-数据模型与数据库初始化
+数据库访问层
 """
 import sqlite3
 import os

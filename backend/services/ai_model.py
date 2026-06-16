@@ -5,7 +5,8 @@ import json
 import os
 from openai import OpenAI
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'data', 'ai_config.json')
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+CONFIG_PATH = os.path.join(BASE_DIR, 'data', 'ai_config.json')
 
 # ─── 模型配置管理 ──────────────────────────────────────
 

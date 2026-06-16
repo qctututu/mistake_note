@@ -15,7 +15,7 @@ sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 # 将项目根目录加入 sys.path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 
-from knowledge_base import init_kb, upload_file
+from services.knowledge_base import init_kb, upload_file
 import io
 
 

@@ -13,8 +13,9 @@ import sqlite3
 from collections import Counter
 import math
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'mistake_note.db')
-KB_DIR = os.path.join(os.path.dirname(__file__), 'data', 'knowledge_base')
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'data', 'mistake_note.db')
+KB_DIR = os.path.join(BASE_DIR, 'data', 'knowledge_base')
 CHUNK_SIZE = 500       # 每块字符数
 CHUNK_OVERLAP = 50     # 重叠字符数
 

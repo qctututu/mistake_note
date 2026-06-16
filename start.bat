@@ -6,7 +6,7 @@ title MistakeNote
 echo Mistake Note - Starting...
 echo.
 
-cd /d "D:\Study\mistake_note"
+cd /d "E:\myPython\mistake_note"
 
 echo [1/3] Installing backend dependencies...
 cd backend
@@ -21,7 +21,7 @@ start "MistakeNote-Backend" cmd /c "python app.py >> "..\logs\backend.log" 2>&1"
 timeout /t 3 /nobreak >nul
 
 echo [3/3] Opening frontend...
-start "" "D:\Study\mistake_note\frontend\index.html"
+start "" "E:\myPython\mistake_note\frontend\index.html"
 
 echo.
 echo =============================================

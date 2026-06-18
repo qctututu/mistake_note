@@ -11,6 +11,8 @@
       renderSubjectOptions,
       starRating,
       setupImageUpload,
+      showModal,
+      closeModal,
       content,
       $,
       toast,
@@ -45,20 +47,20 @@
 
             <div class="form-group">
               <label>题目内容 <span class="required">*</span> ${setupImageUpload('content', 'preview_content')}</label>
-              <textarea name="content" id="ta_content" rows="4" placeholder="输入题目内容……" required></textarea>
+              <textarea name="content" id="ta_content" rows="4" placeholder="输入题目内容……"></textarea>
               <div class="img-preview" id="preview_content"></div>
             </div>
 
             <div class="form-group">
               <label>正确答案 <span class="required">*</span> ${setupImageUpload('correct_answer', 'preview_correct')}</label>
-              <textarea name="correct_answer" id="ta_correct_answer" rows="3" placeholder="标准答案或正确解法" required></textarea>
-              <div class="img-preview" id="preview_correct"></div>
+              <textarea name="correct_answer" id="ta_correct_answer" rows="3" placeholder="标准答案或正确解法"></textarea>
+              <div class="img-preview" id="preview_correct_answer"></div>
             </div>
 
             <div class="form-group">
               <label>你的错误答案 ${setupImageUpload('wrong_answer', 'preview_wrong')}</label>
               <textarea name="wrong_answer" id="ta_wrong_answer" rows="2" placeholder="当时你写了什么？"></textarea>
-              <div class="img-preview" id="preview_wrong"></div>
+              <div class="img-preview" id="preview_wrong_answer"></div>
             </div>
 
             <div class="form-group">
@@ -102,6 +104,28 @@
       }
 
       var _imgUrls = { content: [], correct_answer: [], wrong_answer: [] };
+      var _pendingFiles = { content: [], correct_answer: [], wrong_answer: [] };
+
+      function readFileAsDataURL(file) {
+        return new Promise(function (resolve) {
+          var reader = new FileReader();
+          reader.onload = function (e) { resolve(e.target.result); };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function addLocalImage(textareaName, file) {
+        if (file.size > 10 * 1024 * 1024) {
+          toast('图片不能超过 10MB', 'error');
+          return;
+        }
+        var preview = document.getElementById('preview_' + textareaName);
+        readFileAsDataURL(file).then(function (dataUrl) {
+          _pendingFiles[textareaName].push(file);
+          _imgUrls[textareaName].push(dataUrl);
+          renderThumbnails(textareaName, preview);
+        });
+      }
 
       function bindImageUpload(textareaName) {
         var btn = document.querySelector('.img-upload-btn[data-target="' + textareaName + '"]');
@@ -114,28 +138,34 @@
           input.click();
         });
 
-        input.addEventListener('change', async function () {
+        input.addEventListener('change', function () {
           var file = input.files[0];
           if (!file) return;
-          if (file.size > 10 * 1024 * 1024) {
-            toast('图片不能超过 10MB', 'error');
-            input.value = '';
-            return;
+          addLocalImage(textareaName, file);
+          input.value = '';
+        });
+      }
+
+      function setupPasteImage(textareaName) {
+        var ta = document.getElementById('ta_' + textareaName);
+        if (!ta) return;
+        ta.addEventListener('paste', function (e) {
+          var items = e.clipboardData && e.clipboardData.items;
+          if (!items) return;
+          var imageItem = null;
+          for (var i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image/') === 0) {
+              imageItem = items[i];
+              break;
+            }
           }
-          try {
-            input.disabled = true;
-            btn.style.opacity = '0.5';
-            var result = await API.uploadImage(file);
-            _imgUrls[textareaName].push(result.url);
-            renderThumbnails(textareaName, preview);
-            toast('图片已上传', 'success');
-          } catch (err) {
-            toast('上传失败: ' + err.message, 'error');
-          } finally {
-            input.disabled = false;
-            btn.style.opacity = '1';
-            input.value = '';
-          }
+          if (!imageItem) return;
+
+          e.preventDefault();
+          var file = imageItem.getAsFile();
+          if (!file) return;
+          file = new File([file], 'clipboard_' + Date.now() + '.png', { type: file.type });
+          addLocalImage(textareaName, file);
         });
       }
 
@@ -151,7 +181,16 @@
         preview.querySelectorAll('.img-thumb-remove').forEach(function (el, idx) {
           el.addEventListener('click', function () {
             _imgUrls[field].splice(idx, 1);
+            _pendingFiles[field].splice(idx, 1);
             renderThumbnails(field, preview);
+          });
+        });
+        preview.querySelectorAll('.img-thumb').forEach(function (el) {
+          el.addEventListener('dblclick', function () {
+            showModal('查看原图',
+              '<div style="text-align:center"><img src="' + el.src + '" style="max-width:100%;max-height:80vh;border-radius:8px;"></div>',
+              [{ text: '关闭', cls: 'btn-secondary', onclick: closeModal }]
+            );
           });
         });
       }
@@ -159,6 +198,10 @@
       bindImageUpload('content');
       bindImageUpload('correct_answer');
       bindImageUpload('wrong_answer');
+
+      setupPasteImage('content');
+      setupPasteImage('correct_answer');
+      setupPasteImage('wrong_answer');
 
       if (window.__practiceAddData) {
         var pData = window.__practiceAddData;
@@ -191,30 +234,63 @@
       $('#addForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
-        const data = Object.fromEntries(fd.entries());
-        data.subject_id = parseInt(data.subject_id);
-        data.difficulty = parseInt(data.difficulty || 3);
 
-        if (!data.subject_id) {
+        // 如果内容为空但有图片，自动填充半角空格，同时保留 images 元数据
+        var contentVal = fd.get('content') || '';
+        var correctVal = fd.get('correct_answer') || '';
+        if (!contentVal.trim() && _imgUrls.content.length > 0) {
+          fd.set('content', ' ');
+        }
+        if (!correctVal.trim() && _imgUrls.correct_answer.length > 0) {
+          fd.set('correct_answer', ' ');
+        }
+
+        var subjectId = parseInt(fd.get('subject_id') || 0);
+        var difficulty = parseInt(fd.get('difficulty') || 3);
+
+        if (!subjectId) {
           toast('请选择科目', 'error');
           return;
         }
-        if (!data.content.trim()) {
-          toast('请输入题目内容', 'error');
+        if (!fd.get('content').trim() && _imgUrls.content.length === 0) {
+          toast('请输入题目内容或上传图片', 'error');
           return;
         }
-        if (!data.correct_answer.trim()) {
-          toast('请输入正确答案', 'error');
+        if (!fd.get('correct_answer').trim() && _imgUrls.correct_answer.length === 0) {
+          toast('请输入正确答案或上传图片', 'error');
           return;
         }
 
-        data.images = JSON.stringify(_imgUrls);
-        _imgUrls = { content: [], correct_answer: [], wrong_answer: [] };
+        // 重置表单中已有字段，用正确处理后的值覆盖
+        fd.set('subject_id', subjectId);
+        fd.set('difficulty', difficulty);
+
+        // 将待上传的图片文件附加到 FormData
+        var totalImages = 0;
+        ['content', 'correct_answer', 'wrong_answer'].forEach(function (field) {
+          (_pendingFiles[field] || []).forEach(function (file, idx) {
+            fd.append('image_' + field + '_' + idx, file);
+            totalImages++;
+          });
+        });
 
         try {
-          await API.addQuestion(data);
+          // 有图片用 FormData 提交，无图片用 JSON 提交
+          if (totalImages > 0) {
+            await API.addQuestionWithImages(fd);
+          } else {
+            var plainData = {};
+            fd.forEach(function (v, k) { plainData[k] = v; });
+            plainData.subject_id = parseInt(plainData.subject_id);
+            plainData.difficulty = parseInt(plainData.difficulty || 3);
+            plainData.images = JSON.stringify(_imgUrls);
+            await API.addQuestion(plainData);
+          }
+
           toast('✅ 错题已保存！', 'success');
           e.target.reset();
+          _imgUrls = { content: [], correct_answer: [], wrong_answer: [] };
+          _pendingFiles = { content: [], correct_answer: [], wrong_answer: [] };
           $('#difficultyStars').querySelectorAll('.star').forEach((s, i) => s.classList.toggle('active', i < 3));
           $('#addForm [name="difficulty"]').value = 3;
           document.querySelectorAll('.img-preview').forEach(function(el) { el.innerHTML = ''; });

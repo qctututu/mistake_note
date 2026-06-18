@@ -9,7 +9,7 @@ from .system import register_system_routes
 
 def register_all_routes(app, logger, upload_folder, allowed_image_ext):
     register_subject_routes(app)
-    register_question_routes(app, logger)
+    register_question_routes(app, logger, upload_folder, allowed_image_ext)
     register_review_routes(app)
     register_ai_routes(app)
     register_kb_routes(app)

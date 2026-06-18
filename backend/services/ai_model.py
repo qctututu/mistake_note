@@ -95,8 +95,22 @@ def ai_chat(messages, model=None, temperature=0.7, max_tokens=1024):
     return resp.choices[0].message.content if resp.choices else ''
 
 
+def _build_field_with_images(text, field_images, label):
+    """构建包含图片信息的字段描述"""
+    parts = []
+    if text and text.strip():
+        parts.append(text.strip())
+    if field_images:
+        for url in field_images:
+            parts.append(f'[图片: {url}]')
+    if not parts:
+        parts.append(f'(该字段内容在图片中)')
+    return label + '\n' + '\n'.join(parts)
+
+
 def generate_similar_question(original_question, correct_answer, wrong_answer, analysis,
-                              knowledge_points='', subject='', kb_context=''):
+                              knowledge_points='', subject='', kb_context='',
+                              images=None):
     """
     用 AI 生成一道相似变形题
 
@@ -108,32 +122,42 @@ def generate_similar_question(original_question, correct_answer, wrong_answer, a
       knowledge_points  - 知识点标签
       subject           - 科目
       kb_context        - 知识库检索到的相关上下文
+      images            - 图片URL映射 dict，如 {"content":["url1"], "correct_answer":[], "wrong_answer":[]}
 
     返回:
       {question, answer, hint}
     """
+    # 解析 images 参数
+    img_map = {}
+    if isinstance(images, str):
+        try:
+            img_map = json.loads(images)
+        except (json.JSONDecodeError, TypeError):
+            img_map = {}
+    elif isinstance(images, dict):
+        img_map = images
+
     system_prompt = """你是一位资深的高中教师，擅长出题和变题。
 你的任务是根据一道错题，创作一道「相似但不同」的练习题。
 
 要求：
 1. 保持相同的知识点和难度级别
-2. 修改数字、条件、问法、选项顺序，但核心考点不变
-3. 题目要有区分度，能检验学生是否真正理解
-4. 返回 JSON 格式，不要多余文字"""
+2. 修改数字、条件、问法，但核心考点不变
+3. 如果是选择题，可以更改选项顺序，正确选项不一定要和原来相同
+4. 题目要有区分度，能检验学生是否真正理解
+5. !!! 如果题目或答案中出现了 [图片: http://...] 格式的标记，这说明题目内容在图片中，你需要根据图片 URL 推测题目类型和考点（如果 AI 不支持看图，则根据知识点和上下文尽力生成合理的变形题）
+6. 返回 JSON 格式，不要多余文字"""
 
     user_prompt = f"""请根据以下错题，生成一道变形题：
 
 科目：{subject or '未知'}
 知识点：{knowledge_points or '未知'}
 
-=== 原题 ===
-{original_question}
+{_build_field_with_images(original_question, img_map.get('content', []), '=== 原题 ===')}
 
-=== 正确答案 ===
-{correct_answer}
+{_build_field_with_images(correct_answer, img_map.get('correct_answer', []), '=== 正确答案 ===')}
 
-=== 学生错误答案 ===
-{wrong_answer or '无'}
+{_build_field_with_images(wrong_answer, img_map.get('wrong_answer', []), '=== 学生错误答案 ===')}
 
 === 错因分析 ===
 {analysis or '无'}
@@ -192,12 +216,20 @@ def generate_similar_question(original_question, correct_answer, wrong_answer, a
 
 
 def grade_practice_answer(original_question, original_answer, modified_content, modified_correct_answer,
-                           user_answer, user_answer_images=None):
+                           user_answer, user_answer_images=None, images=None):
     """
     用 AI 批改变形题的用户答案
 
     返回: { is_correct: bool, feedback: str }
     """
+    # 解析原题图片
+    img_map = {}
+    if isinstance(images, str):
+        try: img_map = json.loads(images)
+        except: img_map = {}
+    elif isinstance(images, dict):
+        img_map = images
+
     system_prompt = """你是一位严谨的学科教师，负责批改学生的变形题答案。
 你需要根据以下信息判断学生的答案是否基本正确：
 - 原题内容与答案
@@ -218,10 +250,10 @@ def grade_practice_answer(original_question, original_answer, modified_content, 
         images_info = '\n学生上传了图片答案（URLs: ' + ', '.join(user_answer_images) + '）'
 
     user_prompt = f"""【原题】
-{original_question}
+{_build_field_with_images(original_question, img_map.get('content', []), '')}
 
 【原题答案】
-{original_answer}
+{_build_field_with_images(original_answer, img_map.get('correct_answer', []), '')}
 
 【变形题】
 {modified_content}
@@ -254,12 +286,20 @@ def grade_practice_answer(original_question, original_answer, modified_content, 
 
 
 def generate_problem_analysis(original_question, original_answer, modified_content, modified_correct_answer,
-                               user_answer, is_correct, user_answer_images=None):
+                               user_answer, is_correct, user_answer_images=None, images=None):
     """
     用 AI 生成变形题的详细解析
 
     返回: { analysis: str }
     """
+    # 解析原题图片
+    img_map = {}
+    if isinstance(images, str):
+        try: img_map = json.loads(images)
+        except: img_map = {}
+    elif isinstance(images, dict):
+        img_map = images
+
     system_prompt = """你是一位经验丰富的学科教师，擅长用通俗易懂的方式讲解题目。
 请根据以下信息生成一份详细的解析：
 - 原题与答案
@@ -280,10 +320,10 @@ def generate_problem_analysis(original_question, original_answer, modified_conte
         images_info = '\n学生上传了图片答案（URLs: ' + ', '.join(user_answer_images) + '）'
 
     user_prompt = f"""【原题】
-{original_question}
+{_build_field_with_images(original_question, img_map.get('content', []), '')}
 
 【原题答案】
-{original_answer}
+{_build_field_with_images(original_answer, img_map.get('correct_answer', []), '')}
 
 【变形题】
 {modified_content}

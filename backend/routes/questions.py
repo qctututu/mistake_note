@@ -1,3 +1,7 @@
+import os
+import uuid
+import json
+
 from flask import request, jsonify
 
 from repository.database import add_question, get_question, update_question, delete_question, list_questions
@@ -17,7 +21,31 @@ def _check_encoding(text: str, field_name: str) -> str | None:
     return None
 
 
-def register_question_routes(app, logger):
+def _save_images_from_request(request, upload_folder, allowed_image_ext, field_prefix='image_'):
+    """从 multipart 请求中提取并保存图片文件，返回 { fieldName: [url, ...] }"""
+    import re
+    result = {}
+    for key in request.files:
+        # 匹配 image_content_0, image_correct_answer_1 等
+        m = re.match(r'^image_(content|correct_answer|wrong_answer)_(\d+)$', key)
+        if not m:
+            continue
+        field = m.group(1)
+        f = request.files[key]
+        if f.filename == '':
+            continue
+        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+        if ext not in allowed_image_ext:
+            ext = 'png'  # fallback
+        filename = f'{uuid.uuid4().hex}.{ext}'
+        f.save(os.path.join(upload_folder, filename))
+        port = int(os.environ.get('PORT', 5000))
+        url = f'http://localhost:{port}/uploads/images/{filename}'
+        result.setdefault(field, []).append(url)
+    return result
+
+
+def register_question_routes(app, logger, upload_folder, allowed_image_ext):
     @app.route('/api/questions', methods=['GET'])
     def api_list_questions():
         subject_id = request.args.get('subject_id', type=int)
@@ -39,7 +67,26 @@ def register_question_routes(app, logger):
 
     @app.route('/api/questions', methods=['POST'])
     def api_add_question():
-        data = request.get_json()
+        # 支持 JSON 和 multipart/form-data 两种提交方式
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            data = {
+                'subject_id': int(request.form.get('subject_id', 0)),
+                'content': request.form.get('content', ''),
+                'correct_answer': request.form.get('correct_answer', ''),
+                'wrong_answer': request.form.get('wrong_answer', ''),
+                'analysis': request.form.get('analysis', ''),
+                'knowledge_points': request.form.get('knowledge_points', ''),
+                'difficulty': int(request.form.get('difficulty', 3)),
+                'source': request.form.get('source', ''),
+            }
+            # 保存随表单提交的图片文件
+            images_map = _save_images_from_request(request, upload_folder, allowed_image_ext)
+            data['images'] = json.dumps(images_map, ensure_ascii=False)
+        else:
+            data = request.get_json()
+            if data and 'images' not in data:
+                data['images'] = '{}'
+
         required = ['subject_id', 'content', 'correct_answer']
         for field in required:
             if not data or not data.get(field):

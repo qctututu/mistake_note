@@ -484,6 +484,24 @@ textarea { min-height: 80px; resize: vertical; }
   margin-top: 12px;
 }
 
+/* ─── 练习模式 - 错题源列表 ─── */
+.practice-source-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  border-left: 3px solid var(--accent);
+}
+
+.practice-gen-controls {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
 /* ─── 统计图表区域 ─── */
 .chart-container {
   background: var(--card);

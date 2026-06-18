@@ -45,6 +45,7 @@ const API = (() => {
     },
     getQuestion: (id) => get(`/questions/${id}`),
     addQuestion: (data) => post('/questions', data),
+    addQuestionWithImages: (formData) => postForm('/questions', formData),
     updateQuestion: (id, data) => put(`/questions/${id}`, data),
     deleteQuestion: (id) => del(`/questions/${id}`),
 
@@ -57,6 +58,8 @@ const API = (() => {
     // ─── 练习 ───
     generatePractice: (count = 5, subject_id, useAi = true) =>
       post('/practice/generate', { count, subject_id, use_ai: useAi }),
+    generateFromQuestion: (questionId, count = 1) =>
+      post('/practice/generate-from-question', { question_id: questionId, count }),
     gradePractice: (qid, userAnswer, modifiedContent, modifiedAnswer, images) =>
       post('/practice/grade', {
         question_id: qid,

@@ -61,68 +61,260 @@
       }
 
       const subjects = await loadSubjects();
+
+      const hasRestore = window.__practiceRestoreQuestions || window.__practiceSavedState;
+      // 如果是恢复状态，保持原有生成题列表展示
+      if (hasRestore) {
+        const html = `
+          <h2 class="page-title">🎯 练习模式</h2>
+          <p class="page-subtitle">AI 生成变形题，训练真正的理解能力</p>
+          <div id="practiceList"></div>
+        `;
+        content().innerHTML = html;
+        if (window.__practiceRestoreQuestions) {
+          var restoreQs = window.__practiceRestoreQuestions;
+          window.__practiceRestoreQuestions = null;
+          window.__practiceRestoreImgUrls = null;
+          window.__practiceQuestions = restoreQs;
+          window.__practiceImgUrls = window.__practiceRestoreImgUrls || {};
+          var listEl = $('#practiceList');
+          if (listEl && restoreQs.length > 0) {
+            renderPracticeList(listEl, restoreQs);
+          }
+        }
+        return;
+      }
+
+      // ─── 主界面：先按科目列出错题，逐题生成 ───
       const html = `
         <h2 class="page-title">🎯 练习模式</h2>
-        <p class="page-subtitle">AI 生成变形题，训练真正的理解能力</p>
+        <p class="page-subtitle">选择科目，从错题列表中逐道生成变形题</p>
 
         <div class="card">
           <div class="form-row">
             <div class="form-group">
               <label>科目</label>
               <select id="practiceSubject">
+                <option value="">— 全部科目 —</option>
                 ${renderSubjectOptions(subjects)}
               </select>
             </div>
-            <div class="form-group">
-              <label>生成数量</label>
-              <select id="practiceCount">
-                <option value="1">1 题</option>
-                <option value="3">3 题</option>
-                <option value="5" selected>5 题</option>
-              </select>
-            </div>
           </div>
-          <button class="btn btn-primary btn-block" id="btnGeneratePractice">🤖 AI 生成变形题</button>
-          <p style="text-align:center; font-size:12px; color:#94a3b8; margin-top:8px;">
-            AI 将根据原题 + 知识库上下文生成相似题目
-          </p>
+          <button class="btn btn-primary btn-block" id="btnListQuestions">📋 列出错题</button>
         </div>
 
-        <div id="practiceList"></div>
+        <div id="practiceSourceList"></div>
+        <div id="practiceGeneratedSection"></div>
       `;
       content().innerHTML = html;
 
-      if (window.__practiceRestoreQuestions) {
-        var restoreQs = window.__practiceRestoreQuestions;
-        var restoreUrls = window.__practiceRestoreImgUrls || {};
-        window.__practiceRestoreQuestions = null;
-        window.__practiceRestoreImgUrls = null;
-        window.__practiceQuestions = restoreQs;
-        window.__practiceImgUrls = restoreUrls;
-        var listEl = $('#practiceList');
-        if (listEl && restoreQs.length > 0) {
-          renderPracticeList(listEl, restoreQs);
-        }
-      }
-
-      $('#btnGeneratePractice').addEventListener('click', async () => {
-        const count = parseInt($('#practiceCount').value);
+      // ─── 列出错题 ───
+      $('#btnListQuestions').addEventListener('click', async () => {
         const subjectId = $('#practiceSubject').value || undefined;
-        const list = $('#practiceList');
-        list.innerHTML = '<div class="loading"><div class="spinner"></div><p>🤖 AI 正在生成变形题，请稍候...</p></div>';
+        const listEl = $('#practiceSourceList');
+        listEl.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载错题列表...</p></div>';
 
         try {
-          const questions = await API.generatePractice(count, subjectId, true);
-          if (!questions || questions.length === 0) {
-            list.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>没有足够的题目</h3><p>请先录入一些错题</p></div>';
+          const res = await API.listQuestions({ subject_id: subjectId, page_size: 9999 });
+          const questions = res.data || [];
+          if (questions.length === 0) {
+            listEl.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>暂无错题</h3><p>请先录入一些错题</p></div>';
             return;
           }
-          renderPracticeList(list, questions);
+          renderSourceQuestionList(listEl, questions);
         } catch (e) {
-          list.innerHTML = `<div class="empty-state"><div class="icon">❌</div><h3>生成失败</h3><p>${e.message}</p></div>`;
+          listEl.innerHTML = `<div class="empty-state"><div class="icon">❌</div><h3>加载失败</h3><p>${e.message}</p></div>`;
         }
       });
     };
+
+    // ─── 渲染错题源列表（简略内容 + 查看详情按钮） ───
+    function renderSourceQuestionList(container, questions) {
+      container.innerHTML = questions.map(function(q) {
+        // 从 images JSON 中提取该题的图片缩略图
+        var imgHtml = '';
+        var allUrls = [];
+        try {
+          var imgs = JSON.parse(q.images || '{}');
+          allUrls = (imgs.content || []).concat(imgs.correct_answer || []).concat(imgs.wrong_answer || []);
+          if (allUrls.length > 0) {
+            imgHtml = '<div style="display:flex; gap:4px; margin:6px 0; flex-wrap:wrap;">' +
+              allUrls.slice(0, 3).map(function(url) {
+                return '<img src="' + url + '" class="source-thumb" data-fullsrc="' + url + '" style="max-height:50px; max-width:70px; border-radius:4px; border:1px solid var(--border); object-fit:cover; cursor:pointer;">';
+              }).join('') +
+              (allUrls.length > 3 ? '<span style="font-size:12px; color:#94a3b8; line-height:50px;">+更多</span>' : '') +
+              '</div>';
+          }
+        } catch(e) {}
+
+        var hasImages = allUrls.length > 0;
+        var hasText = q.content && q.content.trim() && q.content.trim() !== ' ';
+
+        return '<div class="practice-source-card" data-qid="' + q.id + '">' +
+          '<div style="display:flex; justify-content:space-between; align-items:flex-start;">' +
+            '<div>' +
+              '<div class="q-subject" style="margin-bottom:2px;">' +
+                escHtml(q.subject_name || '') +
+                ' · 难度 ' + (q.difficulty || '?') +
+                (q.knowledge_points ? ' · ' + escHtml(q.knowledge_points) : '') +
+              '</div>' +
+              '<div style="font-size:13px; color:#94a3b8;">' +
+                (hasText ? escHtml((q.content.trim().length > 80 ? q.content.trim().slice(0, 80) + '…' : q.content.trim())) : '') +
+                (!hasText && hasImages ? '📷 图片题目' : '') +
+                (!hasText && !hasImages ? '（题目内容为空）' : '') +
+              '</div>' +
+            '</div>' +
+            '<button class="btn btn-sm btn-secondary btn-view-detail" style="white-space:nowrap; flex-shrink:0; margin-left:12px;">👁 查看详情</button>' +
+          '</div>' +
+          imgHtml +
+          '<div class="practice-gen-controls">' +
+            '<label style="font-size:13px; color:#64748b; margin-right:6px;">生成</label>' +
+            '<select class="gen-count" style="width:70px; padding:4px 6px; border:1px solid var(--border); border-radius:6px; font-size:13px;">' +
+              '<option value="1">1 题</option>' +
+              '<option value="3" selected>3 题</option>' +
+              '<option value="5">5 题</option>' +
+            '</select>' +
+            '<button class="btn btn-sm btn-primary btn-gen-variant" style="margin-left:8px;">🤖 生成变形题</button>' +
+          '</div>' +
+          '<div class="practice-gen-results" style="margin-top:10px;"></div>' +
+        '</div>';
+      }).join('');
+
+      // 绑定「查看详情」按钮
+      container.querySelectorAll('.btn-view-detail').forEach(function(btn, idx) {
+        btn.addEventListener('click', function() {
+          var q = questions[idx];
+          showQuestionDetail(q);
+        });
+      });
+
+      // 绑定图片双击查看原图
+      container.querySelectorAll('.source-thumb').forEach(function(img) {
+        img.addEventListener('dblclick', function() {
+          var src = img.dataset.fullsrc || img.src;
+          showModal('查看原图',
+            '<div style="text-align:center"><img src="' + src + '" style="max-width:100%;max-height:80vh;border-radius:8px;"></div>',
+            [{ text: '关闭', cls: 'btn-secondary', onclick: closeModal }]
+          );
+        });
+      });
+
+      // 绑定每个生成按钮
+      container.querySelectorAll('.btn-gen-variant').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          var card = btn.closest('.practice-source-card');
+          var qid = parseInt(card.dataset.qid);
+          var count = parseInt(card.querySelector('.gen-count').value);
+          var resultsDiv = card.querySelector('.practice-gen-results');
+
+          resultsDiv.innerHTML = '<div class="loading" style="padding:12px;"><div class="spinner" style="width:24px;height:24px;"></div><p style="font-size:13px; margin-top:6px;">🤖 AI 正在生成变形题...</p></div>';
+          btn.disabled = true;
+
+          try {
+            var genQuestions = await API.generateFromQuestion(qid, count);
+            if (!genQuestions || genQuestions.length === 0) {
+              resultsDiv.innerHTML = '<div style="color:#ef4444; font-size:13px; padding:8px;">生成失败，请重试</div>';
+              return;
+            }
+            renderGeneratedResults(resultsDiv, genQuestions, qid);
+          } catch (e) {
+            resultsDiv.innerHTML = '<div style="color:#ef4444; font-size:13px; padding:8px;">生成失败: ' + e.message + '</div>';
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+
+    // ─── 查看错题详情弹窗 ───
+    function showQuestionDetail(q) {
+      function buildField(label, text, images, fieldName) {
+        var parts = [];
+        if (text && text.trim() && text.trim() !== ' ') {
+          parts.push(escHtml(text.trim()));
+        }
+        if (images && images.length > 0) {
+          images.forEach(function(url) {
+            parts.push('<img src="' + url + '" style="max-width:100%; max-height:300px; border-radius:8px; margin:4px 0; border:1px solid var(--border); display:block;">');
+          });
+        }
+        if (parts.length === 0) return '';
+        return '<div style="margin-bottom:14px;">' +
+          '<strong style="color:#334155;">' + label + '</strong>' +
+          '<div style="margin-top:4px; font-size:14px; line-height:1.7;">' + parts.join('\n') + '</div></div>';
+      }
+
+      var imgs = {};
+      try { imgs = JSON.parse(q.images || '{}'); } catch(e) {}
+
+      var bodyHtml = '<div style="max-height:65vh; overflow-y:auto;">' +
+        '<div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">' +
+          '<span class="tag tag-difficulty-' + (q.difficulty || 3) + '">⭐ ' + (q.difficulty || '?') + '</span>' +
+          (q.knowledge_points ? q.knowledge_points.split(',').map(function(k) { return '<span class="tag">' + escHtml(k.trim()) + '</span>'; }).join('') : '') +
+          (q.source ? '<span class="tag">📎 ' + escHtml(q.source) + '</span>' : '') +
+        '</div>' +
+        buildField('📝 题目内容', q.content, imgs.content, 'content') +
+        buildField('✅ 正确答案', q.correct_answer, imgs.correct_answer, 'correct_answer') +
+        buildField('❌ 你的错误答案', q.wrong_answer, imgs.wrong_answer, 'wrong_answer') +
+        (q.analysis ? '<div style="margin-bottom:14px;"><strong style="color:#334155;">💡 错因分析</strong><div style="margin-top:4px; font-size:14px; line-height:1.7;">' + escHtml(q.analysis) + '</div></div>' : '') +
+        '<div style="font-size:12px; color:#94a3b8; border-top:1px solid var(--border); padding-top:8px;">创建时间: ' + escHtml(q.created_at || '') + '</div>' +
+      '</div>';
+
+      showModal('📘 ' + escHtml(q.subject_name || '') + ' 错题详情', bodyHtml, [
+        { text: '关闭', cls: 'btn-secondary', onclick: closeModal }
+      ]);
+    }
+
+    // ─── 渲染某道题的生成结果 ───
+    function renderGeneratedResults(container, questions, originalQid) {
+      var genMethod = questions.some(function(q) { return q.strategies_used && q.strategies_used.indexOf('AI 生成') !== -1; }) ? 'AI' : '规则引擎';
+      window.__practiceQuestions = (window.__practiceQuestions || []).concat(questions);
+      window.__practiceImgUrls = window.__practiceImgUrls || {};
+
+      var offset = window.__practiceQuestions.length - questions.length;
+      container.innerHTML = questions.map(function(q, i) {
+        var globalIdx = offset + i;
+        window.__practiceImgUrls[globalIdx] = window.__practiceImgUrls[globalIdx] || [];
+        if (q.error) {
+          return '<div class="practice-card" style="border-left-color:#ef4444; padding:12px;">' +
+            '<div style="color:#ef4444;">❌ 生成失败: ' + escHtml(q.error) + '</div></div>';
+        }
+        return '<div class="practice-card">' +
+          (q.hint ? '<div class="practice-hint">💡 ' + escHtml(q.hint) + '</div>' : '') +
+          (q.changed_aspects ? '<div style="font-size:12px; color:#0ea5e5; background:#f0f9ff; padding:6px 12px; border-radius:6px; margin-bottom:12px;">🔄 改动说明: ' + escHtml(q.changed_aspects) + '</div>' : '') +
+          '<div class="q-subject">' + escHtml(q.subject) + ' · 变形题</div>' +
+          (q.knowledge_points ? '<div style="margin-bottom:8px;">' + q.knowledge_points.split(',').map(function(k) { return '<span class="tag">' + escHtml(k.trim()) + '</span>'; }).join('') + '</div>' : '') +
+          '<div class="q-content" style="font-size:16px;">' + escHtml(q.modified_content) + '</div>' +
+
+          '<div id="practiceAnswer_' + globalIdx + '" style="margin-top:12px;">' +
+            '<textarea id="pta_' + globalIdx + '" placeholder="写出你的答案……" rows="3" style="width:100%; padding:10px 14px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; resize:vertical;"></textarea>' +
+            '<div style="margin-top:4px;">' +
+              '<span class="img-upload-btn" data-target="practice_' + globalIdx + '" title="上传图片答案">🖼 上传图片答案</span>' +
+              '<div class="img-preview" id="preview_practice_' + globalIdx + '"></div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div style="display:flex; gap:8px; margin-top:12px;">' +
+            '<button class="btn btn-sm btn-primary" onclick="window.__checkPractice(' + globalIdx + ', this)">📝 核对答案</button>' +
+            '<button class="btn btn-sm btn-secondary" id="btnAnalysis_' + globalIdx + '" disabled style="opacity:0.5; cursor:not-allowed;">📖 问题解析</button>' +
+          '</div>' +
+          '<div id="practiceResult_' + globalIdx + '" style="margin-top:12px;"></div>' +
+          '<div class="original-ref">📎 使用 ' + genMethod + ' · 原题 ID: ' + (q.original_id || originalQid) + '</div>' +
+        '</div>';
+      }).join('');
+
+      // 绑定图片上传
+      questions.forEach(function(q, i) {
+        if (q.error) return;
+        var globalIdx = offset + i;
+        bindPracticeImageUpload(globalIdx);
+      });
+
+      // 滚动到结果区域
+      setTimeout(function() {
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
 
     function renderPracticeList(container, questions) {
       const genMethod = questions.some(q => q.strategies_used && q.strategies_used.includes('AI 生成')) ? 'AI' : '规则引擎';

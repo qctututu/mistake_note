@@ -46,6 +46,7 @@ def register_practice_routes(app):
                         knowledge_points=q.get('knowledge_points', ''),
                         subject=q.get('subject_name', ''),
                         kb_context=kb_ctx,
+                        images=q.get('images', '{}'),
                     )
                     results.append({
                         'original_id': q['id'],
@@ -100,8 +101,54 @@ def register_practice_routes(app):
             modified_correct_answer=modified_correct_answer,
             user_answer=user_answer,
             user_answer_images=user_answer_images,
+            images=q.get('images', '{}'),
         )
         return jsonify(result)
+
+    @app.route('/api/practice/generate-from-question', methods=['POST'])
+    def api_practice_generate_from_question():
+        data = request.get_json()
+        question_id = data.get('question_id')
+        count = data.get('count', 1)
+
+        if not question_id:
+            return jsonify({'error': '缺少 question_id'}), 400
+
+        q = get_question(question_id)
+        if not q:
+            return jsonify({'error': '题目不存在'}), 404
+
+        kb_ctx = retrieve_context(q.get('content', '') + ' ' + q.get('knowledge_points', ''))
+        results = []
+        for i in range(count):
+            try:
+                result = generate_similar_question(
+                    original_question=q.get('content', ''),
+                    correct_answer=q.get('correct_answer', ''),
+                    wrong_answer=q.get('wrong_answer', ''),
+                    analysis=q.get('analysis', ''),
+                    knowledge_points=q.get('knowledge_points', ''),
+                    subject=q.get('subject_name', ''),
+                    kb_context=kb_ctx,
+                    images=q.get('images', '{}'),
+                )
+                results.append({
+                    'original_id': q['id'],
+                    'subject': q.get('subject_name', ''),
+                    'knowledge_points': q.get('knowledge_points', ''),
+                    'modified_content': result.get('question', ''),
+                    'modified_correct_answer': result.get('answer', ''),
+                    'hint': result.get('hint', ''),
+                    'changed_aspects': result.get('changed_aspects', ''),
+                    'strategies_used': ['AI 生成'],
+                })
+            except Exception as e:
+                results.append({
+                    'original_id': q['id'],
+                    'subject': q.get('subject_name', ''),
+                    'error': str(e),
+                })
+        return jsonify(results)
 
     @app.route('/api/practice/analyze', methods=['POST'])
     def api_practice_analyze():
@@ -133,5 +180,6 @@ def register_practice_routes(app):
             user_answer=user_answer,
             is_correct=is_correct,
             user_answer_images=user_answer_images,
+            images=q.get('images', '{}'),
         )
         return jsonify(result)

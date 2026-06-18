@@ -10,6 +10,7 @@
       loadSubjects,
       renderSubjectOptions,
       formatDate,
+      renderContent,
       renderTextWithImages,
       renderFieldImages,
       difficultyTag,
@@ -95,9 +96,9 @@
       const html = res.data.map(q => `
         <div class="question-card" data-id="${q.id}">
           <div class="q-subject">${escHtml(q.subject_name)} · ${formatDate(q.created_at)}</div>
-          <div class="q-content">${renderTextWithImages(q.content)}${renderFieldImages('content', q.images)}</div>
-          ${q.wrong_answer ? `<div class="q-wrong">❌ 你的错误答案：${renderTextWithImages(q.wrong_answer)}${renderFieldImages('wrong_answer', q.images)}</div>` : ''}
-          <div class="q-answer">✅ 正确答案：${renderTextWithImages(q.correct_answer)}${renderFieldImages('correct_answer', q.images)}</div>
+          <div class="q-content">${renderContent(q.content)}${renderFieldImages('content', q.images)}</div>
+          ${q.wrong_answer ? `<div class="q-wrong">❌ 你的错误答案：${renderContent(q.wrong_answer)}${renderFieldImages('wrong_answer', q.images)}</div>` : ''}
+          <div class="q-answer">✅ 正确答案：${renderContent(q.correct_answer)}${renderFieldImages('correct_answer', q.images)}</div>
           ${q.analysis ? `<div class="q-analysis">💡 分析：${escHtml(q.analysis)}</div>` : ''}
           <div class="q-meta">
             ${difficultyTag(q.difficulty)}

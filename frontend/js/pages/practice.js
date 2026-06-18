@@ -13,10 +13,12 @@
       content,
       $,
       escHtml,
+      renderContent,
       toast,
       showModal,
       closeModal,
       navigate,
+      renderMath,
     } = ctx;
 
     renderers.practice = async () => {
@@ -136,7 +138,7 @@
         var allUrls = [];
         try {
           var imgs = JSON.parse(q.images || '{}');
-          allUrls = (imgs.content || []).concat(imgs.correct_answer || []).concat(imgs.wrong_answer || []);
+          allUrls = imgs.content || [];
           if (allUrls.length > 0) {
             imgHtml = '<div style="display:flex; gap:4px; margin:6px 0; flex-wrap:wrap;">' +
               allUrls.slice(0, 3).map(function(url) {
@@ -284,7 +286,7 @@
           (q.changed_aspects ? '<div style="font-size:12px; color:#0ea5e5; background:#f0f9ff; padding:6px 12px; border-radius:6px; margin-bottom:12px;">🔄 改动说明: ' + escHtml(q.changed_aspects) + '</div>' : '') +
           '<div class="q-subject">' + escHtml(q.subject) + ' · 变形题</div>' +
           (q.knowledge_points ? '<div style="margin-bottom:8px;">' + q.knowledge_points.split(',').map(function(k) { return '<span class="tag">' + escHtml(k.trim()) + '</span>'; }).join('') + '</div>' : '') +
-          '<div class="q-content" style="font-size:16px;">' + escHtml(q.modified_content) + '</div>' +
+          '<div class="q-content" style="font-size:16px;">' + renderContent(q.modified_content) + '</div>' +
 
           '<div id="practiceAnswer_' + globalIdx + '" style="margin-top:12px;">' +
             '<textarea id="pta_' + globalIdx + '" placeholder="写出你的答案……" rows="3" style="width:100%; padding:10px 14px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; resize:vertical;"></textarea>' +
@@ -310,7 +312,8 @@
         bindPracticeImageUpload(globalIdx);
       });
 
-      // 滚动到结果区域
+      // 渲染 LaTeX 公式 & 滚动到结果区域
+      renderMath(container);
       setTimeout(function() {
         container.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
@@ -331,7 +334,7 @@
           ${q.changed_aspects ? `<div style="font-size:12px; color:#0ea5e5; background:#f0f9ff; padding:6px 12px; border-radius:6px; margin-bottom:12px;">🔄 改动说明: ${escHtml(q.changed_aspects)}</div>` : ''}
           <div class="q-subject">${escHtml(q.subject)} · 变形题 ${i + 1}</div>
           ${q.knowledge_points ? `<div style="margin-bottom:8px;">${q.knowledge_points.split(',').map(k => `<span class="tag">${escHtml(k.trim())}</span>`).join('')}</div>` : ''}
-          <div class="q-content" style="font-size:16px;">${escHtml(q.modified_content)}</div>
+          <div class="q-content" style="font-size:16px;">${renderContent(q.modified_content)}</div>
 
           <div id="practiceAnswer_${i}" style="margin-top:12px;">
             <textarea id="pta_${i}" placeholder="写出你的答案……" rows="3" style="width:100%; padding:10px 14px; border:1.5px solid '#e2e8f0'; border-radius:8px; font-size:14px; resize:vertical;"></textarea>

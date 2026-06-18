@@ -13,6 +13,8 @@
       location.hash = '#' + page;
       if (renderers[page]) renderers[page]();
       else ui.content().innerHTML = '<div class="empty-state"><div class="icon">🚧</div><h3>页面建设中</h3></div>';
+      // 渲染 LaTeX 公式
+      setTimeout(function () { ui.renderMath(ui.content()); }, 50);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -49,6 +51,7 @@
       // dashboard handles backend unavailable state
     }
     opts.renderers[target]();
+    setTimeout(function () { opts.ui.renderMath(opts.ui.content()); }, 50);
   }
 
   function handleHashChange(renderers, navigate) {

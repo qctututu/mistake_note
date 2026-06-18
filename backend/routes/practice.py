@@ -1,5 +1,7 @@
 from flask import request, jsonify
 
+import json
+
 from repository.database import get_question, list_questions
 from services.question_modifier import batch_modify
 from services.knowledge_base import retrieve_context
@@ -9,6 +11,15 @@ from services.ai_model import (
     grade_practice_answer,
     generate_problem_analysis,
 )
+
+
+def _content_images_only(images_json):
+    """从 images 中仅提取题目（content）部分的图片 URL"""
+    try:
+        imgs = json.loads(images_json) if isinstance(images_json, str) else images_json
+        return {'content': imgs.get('content', [])}
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        return {'content': []}
 
 
 def register_practice_routes(app):
@@ -46,7 +57,7 @@ def register_practice_routes(app):
                         knowledge_points=q.get('knowledge_points', ''),
                         subject=q.get('subject_name', ''),
                         kb_context=kb_ctx,
-                        images=q.get('images', '{}'),
+                        images=_content_images_only(q.get('images', '{}')),
                     )
                     results.append({
                         'original_id': q['id'],
@@ -130,7 +141,7 @@ def register_practice_routes(app):
                     knowledge_points=q.get('knowledge_points', ''),
                     subject=q.get('subject_name', ''),
                     kb_context=kb_ctx,
-                    images=q.get('images', '{}'),
+                    images=_content_images_only(q.get('images', '{}')),
                 )
                 results.append({
                     'original_id': q['id'],

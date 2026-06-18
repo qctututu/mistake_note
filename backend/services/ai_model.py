@@ -137,7 +137,7 @@ def generate_similar_question(original_question, correct_answer, wrong_answer, a
     elif isinstance(images, dict):
         img_map = images
 
-    system_prompt = """你是一位资深的高中教师，擅长出题和变题。
+    system_prompt = r"""你是一位资深的高中教师，擅长出题和变题。
 你的任务是根据一道错题，创作一道「相似但不同」的练习题。
 
 要求：
@@ -146,7 +146,9 @@ def generate_similar_question(original_question, correct_answer, wrong_answer, a
 3. 如果是选择题，可以更改选项顺序，正确选项不一定要和原来相同
 4. 题目要有区分度，能检验学生是否真正理解
 5. !!! 如果题目或答案中出现了 [图片: http://...] 格式的标记，这说明题目内容在图片中，你需要根据图片 URL 推测题目类型和考点（如果 AI 不支持看图，则根据知识点和上下文尽力生成合理的变形题）
-6. 返回 JSON 格式，不要多余文字"""
+6. 返回 JSON 格式，不要多余文字
+7. 题目和答案中的数学公式、化学方程式、物理符号等，必须用 LaTeX 格式输出，行内公式用 $...$ 包裹，独立公式用 $$...$$ 包裹。例如：$f(x) = ax^2 + bx + c$、$\frac{-b \pm \sqrt{b^2-4ac}}{2a}$、$2H_2 + O_2 \xrightarrow{点燃} 2H_2O$、$\sin^2 \alpha + \cos^2 \alpha = 1$
+8. 如果题目涉及几何图形（三角形、圆、坐标系、函数图像等），必须用 SVG 标签绘制图形，SVG 需要包含在题目内容中，用 <svg>...</svg> 包裹。SVG 中坐标和尺寸要准确，文字用 <text> 标签标注。例如：<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg"><polygon points="20,180 180,180 100,20" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/><text x="100" y="195" text-anchor="middle" font-size="14">BC = 8cm</text></svg>"""
 
     user_prompt = f"""请根据以下错题，生成一道变形题：
 
@@ -236,6 +238,8 @@ def grade_practice_answer(original_question, original_answer, modified_content, 
 - 变形后的题目内容与预期答案
 - 学生的作答（可能包含图片 URL，图片无法直接查看，请根据文字描述判断）
 
+注意：题目内容中可能包含 $...$ 或 $$...$$ 格式的 LaTeX 数学公式，请正确理解其含义。
+
 原则：
 1. 核心思路正确即判对，不必每个字都一致
 2. 如果有图片，图片 URL 意味着学生可能手写了答案，按文本内容评判
@@ -306,6 +310,8 @@ def generate_problem_analysis(original_question, original_answer, modified_conte
 - 变形后的题目与答案
 - 学生的作答
 - 批改结果（正确/错误）
+
+注意：题目内容中可能包含 $...$ 或 $$...$$ 格式的 LaTeX 数学公式，在解析中可以使用相同格式输出公式。
 
 解析应包括：
 1. 变形题的解题思路和关键步骤

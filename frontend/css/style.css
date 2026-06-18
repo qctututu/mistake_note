@@ -983,3 +983,15 @@ tr:hover td { background: #f8fafc; }
   border: 1px solid var(--border);
   display: block;
 }
+
+/* ─── SVG 几何图形 ─── */
+.q-content svg,
+.question-text svg,
+.practice-card svg {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 8px 0;
+  background: #fff;
+}

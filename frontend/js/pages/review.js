@@ -13,6 +13,8 @@
       difficultyTag,
       renderTextWithImages,
       renderFieldImages,
+      renderContent,
+      renderMath,
       toast,
       updateDueBadge,
     } = ctx;
@@ -66,7 +68,7 @@
           <div class="review-card">
             <div style="width:100%; text-align:left;">
               <div class="q-subject" style="margin-bottom:8px;">${escHtml(q.subject_name)} · ${difficultyTag(q.difficulty)}</div>
-              <div class="question-text">${renderTextWithImages(q.content)}${renderFieldImages('content', q.images)}</div>
+              <div class="question-text">${renderContent(q.content)}${renderFieldImages('content', q.images)}</div>
               ${q.knowledge_points ? `<div style="margin-bottom:12px;">${q.knowledge_points.split(',').map(k => `<span class="tag">${escHtml(k.trim())}</span>`).join('')}</div>` : ''}
             </div>
 
@@ -97,7 +99,7 @@
         area.innerHTML = `
           <div class="review-result-card">
             <div class="review-answer-compare wrong" style="margin-bottom:12px;">
-              <strong>✅ 正确答案：</strong><br>${renderTextWithImages(q.correct_answer)}${renderFieldImages('correct_answer', q.images)}
+              <strong>✅ 正确答案：</strong><br>${renderContent(q.correct_answer)}${renderFieldImages('correct_answer', q.images)}
             </div>
             ${q.wrong_answer ? `
             <div class="review-answer-compare" style="background:#fef2f2; border:1px solid '#fecaca'; padding:12px; border-radius:8px; margin-bottom:12px;">
@@ -112,6 +114,8 @@
             </div>
           </div>
         `;
+
+        renderMath(area);
 
         actions.innerHTML = `
           <button class="btn btn-success" onclick="window.__submitReview(${q.id}, 'correct', ${currentIdx})">✅ 正确</button>

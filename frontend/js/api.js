@@ -50,7 +50,11 @@ const API = (() => {
     deleteQuestion: (id) => del(`/questions/${id}`),
 
     // ─── 复习 ───
-    getDueReviews: (limit = 10) => get(`/review/due?limit=${limit}`),
+    getDueReviews: (limit = 10, subjectId) => {
+      let path = `/review/due?limit=${limit}`;
+      if (subjectId) path += `&subject_id=${subjectId}`;
+      return get(path);
+    },
     submitReview: (qid, result) => post('/review/submit', { question_id: qid, result }),
     getReviewHistory: (qid) => get(`/review/history/${qid}`),
     getReviewForecast: () => get('/review/forecast'),

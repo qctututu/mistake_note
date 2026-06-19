@@ -199,17 +199,22 @@ def list_questions(subject_id=None, knowledge_point=None, search=None,
     }
 
 
-def get_questions_for_review(limit=10):
-    """获取今天到期的复习题目（按到期时间排序）"""
+def get_questions_for_review(limit=10, subject_id=None):
+    """获取今天到期的复习题目（按到期时间排序），可选按科目筛选"""
     conn = get_db()
-    rows = conn.execute("""
+    sql = """
         SELECT q.*, s.name AS subject_name
         FROM questions q
         JOIN subjects s ON s.id = q.subject_id
         WHERE q.next_review_at <= datetime('now','localtime')
-        ORDER BY q.next_review_at ASC
-        LIMIT ?
-    """, (limit,)).fetchall()
+    """
+    params = []
+    if subject_id:
+        sql += " AND q.subject_id = ?"
+        params.append(subject_id)
+    sql += " ORDER BY q.next_review_at ASC LIMIT ?"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 

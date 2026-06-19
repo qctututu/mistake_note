@@ -11,7 +11,7 @@ venv/
 .venv/
 
 # 用户数据（不提交到版本控制）
-backend/data/mistake_note.db
+backend/repository/data/mistake_note.db
 backend/data/ai_config.json
 backend/data/images/
 backend/data/knowledge_base/

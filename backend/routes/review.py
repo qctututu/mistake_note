@@ -8,7 +8,8 @@ def register_review_routes(app):
     @app.route('/api/review/due', methods=['GET'])
     def api_review_due():
         limit = request.args.get('limit', 10, type=int)
-        questions = get_questions_for_review(limit=limit)
+        subject_id = request.args.get('subject_id', None, type=int)
+        questions = get_questions_for_review(limit=limit, subject_id=subject_id)
         return jsonify(questions)
 
     @app.route('/api/review/submit', methods=['POST'])

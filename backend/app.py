@@ -22,7 +22,13 @@ from repository.database import init_db
 from routes import register_all_routes
 
 app = Flask(__name__)
-CORS(app)
+
+# CORS 配置：允许 file:// 协议（origin 为 null）的跨域请求
+CORS(app,
+     origins=["*", "null"],
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'data', 'images')

@@ -367,6 +367,53 @@ textarea { min-height: 80px; resize: vertical; }
 }
 
 /* ─── 复习模式（抽卡式） ─── */
+
+/* 复习科目筛选栏 */
+.review-filter-bar {
+  max-width: 700px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.review-filter-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.review-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-filter-chips .chip {
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.review-filter-chips .chip:hover {
+  border-color: var(--primary-light);
+  color: var(--primary);
+  background: #eef2ff;
+}
+
+.review-filter-chips .chip.chip-active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
 .review-container {
   max-width: 700px;
   margin: 0 auto;

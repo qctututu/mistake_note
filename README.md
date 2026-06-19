@@ -50,6 +50,8 @@ python app.py
 
 ```text
 mistake_note/
+├── .vscode/
+│   └── launch.json                  # VS Code 调试配置
 ├── backend/
 │   ├── app.py                       # Flask 入口，注册全部路由
 │   ├── requirements.txt
@@ -70,9 +72,11 @@ mistake_note/
 │   │   └── knowledge_base.py
 │   ├── repository/                  # 数据访问层
 │   │   ├── __init__.py
-│   │   └── database.py
+│   │   ├── database.py
+│   │   └── data/
+│   │       └── mistake_note.db      # SQLite 数据库（自动创建）
 │   └── data/
-│       ├── mistake_note.db          # SQLite 数据库（自动创建）
+│       ├── ai_config.json           # AI 模型配置（自动生成）
 │       ├── images/                  # 上传图片目录
 │       └── knowledge_base/          # 知识库文件目录
 ├── frontend/
@@ -98,10 +102,11 @@ mistake_note/
 │           ├── ai_model.js
 │           └── knowledge_base.js
 ├── logs/
-│   └── backend.log
-├── test_files/
-├── batch_import_kb.py
-├── fix_encoding.py
+│   ├── .gitkeep
+│   └── backend.log                  # 后端运行日志
+├── test_files/                      # 测试用知识库文件
+├── batch_import_kb.py               # 批量导入知识库脚本
+├── fix_encoding.py                  # 文件编码修复脚本
 ├── start.bat
 ├── start.ps1
 └── README.md
